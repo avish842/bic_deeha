@@ -1,0 +1,35 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependencies
+node_modules/
+
+# Environment Variables
+.env
+.env.local
+.env.*
+
+# Testing
+coverage/
+
+# Production
+build/
+dist/
+
+# Cloudinary/Uploads (local temp)
+uploads/
+public/uploads/
+temp/
+
+# Misc
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.eslintcache
+.nyc_output/
+.npm/
