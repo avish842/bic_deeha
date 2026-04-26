@@ -1,6 +1,6 @@
 const appConfig = {
   APP_NAME: "BIC DEEHA",
-  VERSION: "1.0.0",
+  VERSION: "3.2.2.0",
   DESCRIPTION: "Balbhadra Inter College, Deeha - Aided Co-educational Institution",
 
   CONTACT: {
