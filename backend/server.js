@@ -20,7 +20,22 @@ const app = express();
 
 // ─── Core Middleware ─────────────────────────
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+  origin: function (origin, callback) {
+    const rawOrigins = [
+      "http://localhost:5173", 
+      "https://bic-deeha-frontend.vercel.app",
+      process.env.CORS_ORIGIN
+    ].filter(Boolean);
+    
+    // Normalize origins (remove trailing slashes) to prevent CORS mismatch
+    const allowedOrigins = rawOrigins.map(url => url.endsWith('/') ? url.slice(0, -1) : url);
+    
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, origin); // Always return the exact matched origin without trailing slash
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: "16kb" }));
