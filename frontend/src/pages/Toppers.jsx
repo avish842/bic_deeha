@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FiAward, FiBook, FiUser } from "react-icons/fi";
+import { FiAward } from "react-icons/fi";
 import studentApi from "../services/student.api";
 import Loader from "../components/Loader";
 import appConfig from "../config/app.config";
@@ -68,6 +68,8 @@ const Toppers = () => {
                           <img 
                             src={student.profileImage.url} 
                             alt={student.name}
+                            loading="lazy"
+                            decoding="async"
                             className="w-24 h-24 rounded-full object-cover border-4 border-white absolute bottom-0 translate-y-1/2 shadow-lg bg-white"
                           />
                         ) : (

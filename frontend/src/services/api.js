@@ -1,18 +1,14 @@
 import axios from "axios";
 import envConfig from "../config/env.config";
 
-// Remove trailing slash safely before adding /api if not present
-let baseUrl = envConfig.API_BASE_URL || "";
-if (baseUrl.endsWith('/')) {
-  baseUrl = baseUrl.slice(0, -1);
-}
-// If user already included /api in the env variable, don't add it twice
-if (!baseUrl.endsWith('/api')) {
-  baseUrl += '/api';
-}
+// Normalize base URL: strip trailing slashes, safely append '/api'
+const getBaseUrl = (url = "") => {
+  const cleanUrl = url.replace(/\/+$/, "");
+  return cleanUrl.endsWith("/api") ? cleanUrl : `${cleanUrl}/api`;
+};
 
 const api = axios.create({
-  baseURL: baseUrl,
+  baseURL: getBaseUrl(envConfig.API_BASE_URL),
   headers: {
     "Content-Type": "application/json",
   },

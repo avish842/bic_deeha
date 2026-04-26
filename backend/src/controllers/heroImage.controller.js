@@ -9,6 +9,7 @@ export const addHeroImage = asyncHandler(async (req, res) => {
 
 export const getActiveHeroImages = asyncHandler(async (req, res) => {
     const images = await heroService.getAllImages();
+    res.set("Cache-Control", "public, max-age=60, s-maxage=300, stale-while-revalidate=600");
     res.status(200).json(ApiResponse.success(images, "Active hero images fetched successfully."));
 });
 

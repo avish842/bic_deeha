@@ -14,7 +14,10 @@ class HeroService {
   }
 
   async getAllImages() {
-    return await HeroImage.find({ isActive: true }).sort({ createdAt: -1 });
+    return await HeroImage.find({ isActive: true })
+      .select("imageUrl createdAt")
+      .sort({ createdAt: -1 })
+      .lean();
   }
 
   async getAllForAdmin() {

@@ -13,6 +13,15 @@ const fallbackImages = [
   "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&q=80",
 ];
 
+const preloadImage = (src) =>
+  new Promise((resolve, reject) => {
+    if (!src) return reject(new Error("Invalid image source"));
+    const image = new Image();
+    image.onload = () => resolve(src);
+    image.onerror = reject;
+    image.src = src;
+  });
+
 const Home = () => {
   const [notices, setNotices] = useState([]);
   const [achievements, setAchievements] = useState([]);
@@ -20,37 +29,64 @@ const Home = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentImageIndex((prev) => (prev + 1) % heroImages.length);
+    if (heroImages.length <= 1) return undefined;
+
+    const timer = setTimeout(async () => {
+      const nextIndex = (currentImageIndex + 1) % heroImages.length;
+      try {
+        await preloadImage(heroImages[nextIndex]);
+      } catch (_error) {
+        // Continue slide transition even if preload fails
+      }
+      setCurrentImageIndex(nextIndex);
     }, 5000);
-    return () => clearInterval(timer);
-  }, [heroImages.length]);
+
+    return () => clearTimeout(timer);
+  }, [currentImageIndex, heroImages]);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchPublicData = async () => {
       try {
-        const [noticeRes, achieveRes, heroRes] = await Promise.all([
+        const [noticeRes, achieveRes] = await Promise.all([
           noticeApi.getAll({ limit: 5, isActive: "true" }),
           achievementApi.getAll({ limit: 4 }),
-          heroApi.getActive(),
         ]);
         setNotices(noticeRes.data?.notices || []);
         setAchievements(achieveRes.data?.achievements || []);
-        if (heroRes.data && heroRes.data.length > 0) {
-          setHeroImages(heroRes.data.map(img => img.imageUrl));
-        }
       } catch (error) {
         console.error("Error fetching home data:", error);
       }
     };
-    fetchData();
+
+    const fetchHeroImages = async () => {
+      try {
+        const heroRes = await heroApi.getActive();
+        const urls = (heroRes.data || []).map((img) => img.imageUrl).filter(Boolean);
+
+        if (urls.length > 0) {
+          await preloadImage(urls[0]);
+          setHeroImages(urls);
+          setCurrentImageIndex(0);
+
+          // Warm up next slides in background for smoother transitions
+          urls.slice(1, 3).forEach((url) => {
+            preloadImage(url).catch(() => {});
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching hero images:", error);
+      }
+    };
+
+    fetchPublicData();
+    fetchHeroImages();
   }, []);
 
   const features = [
     { icon: FiFileText, label: "Notices", desc: "Stay updated with latest announcements", path: "/notices", color: "from-blue-500 to-blue-600" },
     { icon: FiImage, label: "Gallery", desc: "Explore our campus memories", path: "/gallery", color: "from-purple-500 to-purple-600" },
     { icon: FiAward, label: "Achievements", desc: "Celebrating excellence", path: "/achievements", color: "from-amber-500 to-amber-600" },
-    { icon: FiUsers, label: "Students", desc: "Find student profiles", path: "/students", color: "from-emerald-500 to-emerald-600" },
+    { icon: FiUsers, label: "Toppers", desc: "Year-wise top achievers", path: "/toppers", color: "from-emerald-500 to-emerald-600" },
   ];
 
   return (
@@ -59,21 +95,18 @@ const Home = () => {
       <section className="relative min-h-screen flex items-center overflow-hidden">
         {/* Background Slider */}
         <div className="absolute inset-0 z-0">
-          {heroImages.map((img, index) => (
-            <div
-              key={index}
-              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-                index === currentImageIndex ? "opacity-100" : "opacity-0"
-              }`}
-            >
-              <div className="absolute inset-0 bg-black/60 z-10" />
-              <img
-                src={img}
-                alt={`School ${index + 1}`}
-                className="w-full h-full object-cover scale-105 animate-slow-zoom"
-              />
-            </div>
-          ))}
+          <div className="absolute inset-0 transition-opacity duration-700 ease-in-out opacity-100">
+            <div className="absolute inset-0 bg-black/60 z-10" />
+            <img
+              key={heroImages[currentImageIndex]}
+              src={heroImages[currentImageIndex]}
+              alt={`School ${currentImageIndex + 1}`}
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+              className="w-full h-full object-cover scale-105 animate-slow-zoom"
+            />
+          </div>
         </div>
 
         {/* Floating Gradients & Shapes */}
@@ -224,7 +257,13 @@ const Home = () => {
                 <div key={a._id} className="card overflow-hidden group">
                   {a.image?.url ? (
                     <div className="h-48 overflow-hidden">
-                      <img src={a.image.url} alt={a.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <img
+                        src={a.image.url}
+                        alt={a.title}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
                     </div>
                   ) : (
                     <div className="h-48 bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center">

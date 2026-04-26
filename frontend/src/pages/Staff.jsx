@@ -7,13 +7,22 @@ const Staff = () => {
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     const fetchStaff = async () => {
       setLoading(true);
       try {
         const params = { limit: 100 };
-        if (search) params.search = search;
+        if (debouncedSearch) params.search = debouncedSearch;
         const res = await staffApi.getAll(params);
         setStaffList(res.data?.staff || []);
       } catch (error) {
@@ -22,7 +31,7 @@ const Staff = () => {
       setLoading(false);
     };
     fetchStaff();
-  }, [search]);
+  }, [debouncedSearch]);
 
   return (
     <div className="page-enter py-20 min-h-screen bg-dark-50">
@@ -58,7 +67,13 @@ const Staff = () => {
               <div key={member._id} className="bg-white rounded-2xl shadow-sm border border-dark-100 overflow-hidden hover:shadow-md transition-shadow group">
                 <div className="flex items-center gap-4 p-5 border-b border-dark-100 bg-gradient-to-r from-primary-50/50 to-white">
                   {member.image?.url ? (
-                    <img src={member.image.url} alt={member.name} className="w-16 h-16 rounded-full object-cover border-2 border-primary-100" />
+                    <img
+                      src={member.image.url}
+                      alt={member.name}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-16 h-16 rounded-full object-cover border-2 border-primary-100"
+                    />
                   ) : (
                     <div className="w-16 h-16 rounded-full bg-primary-100/50 text-primary-600 flex items-center justify-center font-bold text-xl border-2 border-primary-100">
                       {member.name.charAt(0)}
