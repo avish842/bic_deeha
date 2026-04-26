@@ -6,6 +6,7 @@ import noticeApi from "../services/notice.api";
 import achievementApi from "../services/achievement.api";
 import heroApi from "../services/hero.api";
 import PriorityBadge from "../components/PriorityBadge";
+import { buildHeroSrcSet, optimizeCloudinaryImage } from "../utils/imageOptimizer";
 
 const fallbackImages = [
   "https://images.unsplash.com/photo-1541339907198-e08756ebafe3?auto=format&fit=crop&q=80",
@@ -34,7 +35,7 @@ const Home = () => {
     const timer = setTimeout(async () => {
       const nextIndex = (currentImageIndex + 1) % heroImages.length;
       try {
-        await preloadImage(heroImages[nextIndex]);
+        await preloadImage(optimizeCloudinaryImage(heroImages[nextIndex], { width: 1600, height: 900 }));
       } catch (_error) {
         // Continue slide transition even if preload fails
       }
@@ -64,13 +65,13 @@ const Home = () => {
         const urls = (heroRes.data || []).map((img) => img.imageUrl).filter(Boolean);
 
         if (urls.length > 0) {
-          await preloadImage(urls[0]);
+          await preloadImage(optimizeCloudinaryImage(urls[0], { width: 1600, height: 900 }));
           setHeroImages(urls);
           setCurrentImageIndex(0);
 
           // Warm up next slides in background for smoother transitions
           urls.slice(1, 3).forEach((url) => {
-            preloadImage(url).catch(() => {});
+            preloadImage(optimizeCloudinaryImage(url, { width: 1600, height: 900 })).catch(() => {});
           });
         }
       } catch (error) {
@@ -89,6 +90,10 @@ const Home = () => {
     { icon: FiUsers, label: "Toppers", desc: "Year-wise top achievers", path: "/toppers", color: "from-emerald-500 to-emerald-600" },
   ];
 
+  const activeHeroImage = heroImages[currentImageIndex];
+  const activeHeroSrc = optimizeCloudinaryImage(activeHeroImage, { width: 1600, height: 900 });
+  const activeHeroSrcSet = buildHeroSrcSet(activeHeroImage);
+
   return (
     <div className="page-enter">
       {/* Hero Section */}
@@ -98,8 +103,10 @@ const Home = () => {
           <div className="absolute inset-0 transition-opacity duration-700 ease-in-out opacity-100">
             <div className="absolute inset-0 bg-black/60 z-10" />
             <img
-              key={heroImages[currentImageIndex]}
-              src={heroImages[currentImageIndex]}
+              key={activeHeroImage}
+              src={activeHeroSrc}
+              srcSet={activeHeroSrcSet}
+              sizes="100vw"
               alt={`School ${currentImageIndex + 1}`}
               loading="eager"
               fetchPriority="high"
