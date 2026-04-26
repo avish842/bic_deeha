@@ -4,6 +4,8 @@ import {
   getActiveHeroImages,
   getAllHeroImagesAdmin,
   toggleHeroImageStatus,
+  updateHeroImageOrder,
+  updateHeroImageTargetAudience,
   deleteHeroImage,
 } from "../controllers/heroImage.controller.js";
 import authMiddleware from "../middlewares/auth.middleware.js";
@@ -20,6 +22,8 @@ router.use(authMiddleware, roleMiddleware("SUPER_ADMIN", "ADMIN"));
 router.get("/admin", getAllHeroImagesAdmin);
 router.post("/", uploadHeroImage, addHeroImage);
 router.patch("/:id/toggle", toggleHeroImageStatus);
+router.patch("/:id/order", updateHeroImageOrder);
+router.patch("/:id/target", updateHeroImageTargetAudience);
 router.delete("/:id", deleteHeroImage);
 
 export default router;

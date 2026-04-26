@@ -14,6 +14,18 @@ const heroImageSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    order: {
+      type: Number,
+      default: 0,
+      min: 0,
+      index: true,
+    },
+    targetAudience: {
+      type: String,
+      enum: ["BOTH", "DESKTOP", "MOBILE"],
+      default: "BOTH",
+      index: true,
+    },
   },
   {
     timestamps: true,

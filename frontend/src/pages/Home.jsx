@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FiArrowRight, FiFileText, FiImage, FiAward, FiUsers } from "react-icons/fi";
 import appConfig from "../config/app.config";
 import noticeApi from "../services/notice.api";
@@ -26,8 +26,29 @@ const preloadImage = (src) =>
 const Home = () => {
   const [notices, setNotices] = useState([]);
   const [achievements, setAchievements] = useState([]);
-  const [heroImages, setHeroImages] = useState(fallbackImages);
+  const [heroItems, setHeroItems] = useState([]);
+  const [isMobileView, setIsMobileView] = useState(() => window.innerWidth < 768);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const heroImages = useMemo(() => {
+    if (heroItems.length === 0) return fallbackImages;
+
+    const target = isMobileView ? "MOBILE" : "DESKTOP";
+    const targeted = heroItems
+      .filter((item) => item.targetAudience === "BOTH" || item.targetAudience === target)
+      .map((item) => item.imageUrl)
+      .filter(Boolean);
+
+    if (targeted.length > 0) return targeted;
+
+    return heroItems.map((item) => item.imageUrl).filter(Boolean);
+  }, [heroItems, isMobileView]);
+
+  useEffect(() => {
+    const onResize = () => setIsMobileView(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   useEffect(() => {
     if (heroImages.length <= 1) return undefined;
@@ -62,11 +83,12 @@ const Home = () => {
     const fetchHeroImages = async () => {
       try {
         const heroRes = await heroApi.getActive();
-        const urls = (heroRes.data || []).map((img) => img.imageUrl).filter(Boolean);
+        const items = (heroRes.data || []).filter((img) => img?.imageUrl);
+        const urls = items.map((img) => img.imageUrl);
 
         if (urls.length > 0) {
+          setHeroItems(items);
           await preloadImage(optimizeCloudinaryImage(urls[0], { width: 1600, height: 900 }));
-          setHeroImages(urls);
           setCurrentImageIndex(0);
 
           // Warm up next slides in background for smoother transitions
@@ -83,6 +105,12 @@ const Home = () => {
     fetchHeroImages();
   }, []);
 
+  useEffect(() => {
+    if (currentImageIndex >= heroImages.length) {
+      setCurrentImageIndex(0);
+    }
+  }, [heroImages.length, currentImageIndex]);
+
   const features = [
     { icon: FiFileText, label: "Notices", desc: "Stay updated with latest announcements", path: "/notices", color: "from-blue-500 to-blue-600" },
     { icon: FiImage, label: "Gallery", desc: "Explore our campus memories", path: "/gallery", color: "from-purple-500 to-purple-600" },
@@ -90,36 +118,45 @@ const Home = () => {
     { icon: FiUsers, label: "Toppers", desc: "Year-wise top achievers", path: "/toppers", color: "from-emerald-500 to-emerald-600" },
   ];
 
-  const activeHeroImage = heroImages[currentImageIndex];
-  const activeHeroSrc = optimizeCloudinaryImage(activeHeroImage, { width: 1600, height: 900 });
-  const activeHeroSrcSet = buildHeroSrcSet(activeHeroImage);
+  const sliderTransform = `translate3d(-${currentImageIndex * 100}%, 0, 0)`;
 
   return (
     <div className="page-enter">
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center overflow-hidden">
+      <section className="relative min-h-[72vh] sm:min-h-[85vh] lg:min-h-screen flex items-center overflow-hidden">
         {/* Background Slider */}
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 transition-opacity duration-700 ease-in-out opacity-100">
-            <div className="absolute inset-0 bg-black/60 z-10" />
-            <img
-              key={activeHeroImage}
-              src={activeHeroSrc}
-              srcSet={activeHeroSrcSet}
-              sizes="100vw"
-              alt={`School ${currentImageIndex + 1}`}
-              loading="eager"
-              fetchPriority="high"
-              decoding="async"
-              className="w-full h-full object-cover scale-105 animate-slow-zoom"
-            />
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <div
+            className="h-full flex transition-transform duration-700 ease-out will-change-transform"
+            style={{ transform: sliderTransform }}
+          >
+            {heroImages.map((imageUrl, index) => {
+              const optimizedSrc = optimizeCloudinaryImage(imageUrl, { width: 1600, height: 900 });
+              const optimizedSrcSet = buildHeroSrcSet(imageUrl);
+
+              return (
+                <div key={`${imageUrl}-${index}`} className="relative w-full h-full flex-shrink-0">
+                  <img
+                    src={optimizedSrc}
+                    srcSet={optimizedSrcSet}
+                    sizes="100vw"
+                    alt={`School ${index + 1}`}
+                    loading={index === 0 ? "eager" : "lazy"}
+                    fetchPriority={index === 0 ? "high" : "auto"}
+                    decoding="async"
+                    className={`w-full h-full object-cover scale-105 ${index === currentImageIndex ? "animate-slow-zoom" : ""}`}
+                  />
+                </div>
+              );
+            })}
           </div>
+          <div className="absolute inset-0 bg-black/60 z-10" />
         </div>
 
         {/* Floating Gradients & Shapes */}
         <div className="absolute inset-0 z-10 opacity-30 pointer-events-none">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-primary-500 rounded-full blur-[120px]" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-secondary-500 rounded-full blur-[150px]" />
+          <div className="absolute top-16 left-6 sm:left-10 w-44 sm:w-72 h-44 sm:h-72 bg-primary-500 rounded-full blur-[90px] sm:blur-[120px]" />
+          <div className="absolute bottom-10 sm:bottom-20 right-4 sm:right-10 w-60 sm:w-96 h-60 sm:h-96 bg-secondary-500 rounded-full blur-[100px] sm:blur-[150px]" />
         </div>
 
         {/* Grid overlay */}
@@ -130,30 +167,27 @@ const Home = () => {
           }}
         />
 
-        <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/20 text-sm text-primary-200 mb-8">
-              <span className="w-2 h-2 bg-secondary-400 rounded-full animate-pulse" />
-              Welcome to {appConfig.APP_NAME}
-            </div>
+        <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 w-full">
+          <div className="max-w-3xl text-center sm:text-left">
+            
 
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold font-heading text-white leading-tight mb-6">
+            <h1 className="text-3xl sm:text-6xl lg:text-7xl font-bold font-heading text-white leading-tight mb-5 sm:mb-6">
               Welcome to{" "}
               <span className="bg-gradient-to-r from-primary-300 to-secondary-400 bg-clip-text text-transparent">
                 Balbhadra Inter College
               </span>
             </h1>
 
-            <p className="text-lg sm:text-xl text-dark-100 leading-relaxed mb-10 max-w-2xl font-light">
+            <p className="text-base sm:text-xl text-dark-100 leading-relaxed mb-8 sm:mb-10 max-w-2xl font-light mx-auto sm:mx-0">
               Established in 1965, we are an aided co-educational institution located in Deeha, Pratapgarh. We are committed to academic development and overall student growth, providing quality education in a peaceful environment that supports learning and discipline.
             </p>
 
-            <div className="flex flex-wrap gap-4">
-              <Link to="/notices" className="btn-primary text-lg px-8 py-4 shadow-xl shadow-primary-500/20">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4">
+              <Link to="/notices" className="btn-primary text-base sm:text-lg px-6 sm:px-8 py-3.5 sm:py-4 shadow-xl shadow-primary-500/20 w-full sm:w-auto justify-center">
                 View Notices
                 <FiArrowRight className="ml-2" />
               </Link>
-              <Link to="/gallery" className="btn-secondary text-lg px-8 py-4 !bg-white/10 !text-white !border-white/20 hover:!bg-white/20 backdrop-blur-sm">
+              <Link to="/gallery" className="btn-secondary text-base sm:text-lg px-6 sm:px-8 py-3.5 sm:py-4 !bg-white/10 !text-white !border-white/20 hover:!bg-white/20 backdrop-blur-sm w-full sm:w-auto justify-center">
                 Explore Gallery
               </Link>
             </div>

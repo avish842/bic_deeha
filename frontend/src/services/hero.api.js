@@ -10,6 +10,8 @@ const heroApi = {
     headers: { "Content-Type": "multipart/form-data" },
   }),
   toggleStatus: (id) => api.patch(`/hero/${id}/toggle`),
+  updateOrder: (id, order) => api.patch(`/hero/${id}/order`, { order }),
+  updateTargetAudience: (id, targetAudience) => api.patch(`/hero/${id}/target`, { targetAudience }),
   delete: (id) => api.delete(`/hero/${id}`),
 };
 
